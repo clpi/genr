@@ -1,18 +1,13 @@
+pub mod dom;
+pub mod io;
+
 use std::{
     collections::HashMap,
     borrow::Cow,
 };
 use serde_json;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
-
-pub fn to_html_tag(tag: String, attr: HashMap<String, String>) -> String {
+pub fn to_html_tag_start(tag: &str, attr: Vec<(String, String)>) -> String {
     let attrs = attr.into_iter()
         .map(|(a, v)| {
             format!("{}={}", a, serde_json::to_string(&v).expect(""))
@@ -20,6 +15,18 @@ pub fn to_html_tag(tag: String, attr: HashMap<String, String>) -> String {
         .collect::<Vec<String>>()
         .join(" ");
     format!("<{} {}>", tag, attrs)
+}
+
+pub fn set_inner_text(tag: &str, text: &str, attr: Option<Vec<(String, String)>>) -> String {
+    let mut html = String::new();
+    if let Some(attr) = attr {
+        html.push_str(to_html_tag_start(tag, attr).as_str());
+    } else { 
+        html.push_str(to_html_tag_start(tag, Vec::new()).as_str()) 
+    }
+    html.push_str(text);
+    html.push_str(format!("</{}>", tag).as_str());
+    html
 }
 
 pub fn html_escape(input: &str) -> Cow<str> {
@@ -56,4 +63,30 @@ pub enum HtmlEscape {
     Gt,
     DoubleQuote,
     Backslash,
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+    
+    #[test]
+    pub fn to_html_tag_start_works() {
+        let tag = "a";
+        let mut attrs = Vec::new();
+        attrs.push(("href".to_string(), "http://chris.pecunies.com".to_string()));
+        attrs.push(("class".to_string(), "link".to_string()));
+        let to_html = dbg!(to_html_tag_start(tag, attrs));
+        debug_assert_eq!(to_html, "<a href=\"http://chris.pecunies.com\" class=\"link\">");
+    }
+
+    #[test]
+    pub fn set_inner_html_text_works() {
+        let tag = "button";
+        let mut attrs = Vec::new();
+        attrs.push(("class".to_string(), "btn".to_string()));
+        let to_html = dbg!(set_inner_text(tag, "submit", Some(attrs)));
+        assert_eq!(to_html, "<button class=\"btn\">submit</button>");
+    }
+
 }
